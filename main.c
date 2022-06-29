@@ -60,6 +60,7 @@ typedef struct
     PedidoPreparacion items_pedido[20]; ///puedo pedir hasta 20 items
     int cantItems; ///los validos del arreglo de items_pedido
     float valor_total; ///valor total a pagar
+    int bajaLogica;
 } Venta;
 
 ///-----------------------------Prototipos
@@ -98,6 +99,11 @@ float armarPedidos(PreparacionVenta[max], PrecioPreparacion[max], PedidoPreparac
 void venta(PreparacionVenta[max], PrecioPreparacion[max], PedidoPreparacion[max], Venta[max], int, int, int*);
 void mostrarVentas(Venta[max], int);
 void PersistenciaVentas (Venta[max], int);
+void despersistenciaVenta (Venta[max], int*);
+void bajaLogicaVentaPorId(Venta[max], int);
+void mantenimientoArchivoVentas(Venta[max], int*);
+void reintegrarProductos(PreparacionVenta[max], Venta[max], int, int, int);
+int ingresarIdVenta();
 //Paso4
 char mostrarPaso4Menu();
 float consultaCaja(Venta[max], int);
@@ -172,13 +178,14 @@ int main()
             system("cls");
             //Fue necesario hacer todas las despersistencias, porque sino era obligatorio tener que realizar los pasos previos del menú.
             usarIngredientes(listaRecetas, listaStock, listaPreparacion, listaPreparados, validoStock, validoDemanda, validoRecetas, &validoPreparados);
-//            persistenciaStock(listaStock, validoStock); comentado para no tener que reemplazar el archivo, por ahora.
+//            persistenciaStock(listaStock, validoStock);
             break;
 
         case 5:
             system("cls");
             printf("----------LISTO PARA LA VENTA----------\n");
             mostrarPreparadosParaLaVenta(listaPreparados, validoPreparados);
+
 //            persistenciaPreparados(listaPreparados, validoPreparados);
             break;
 
@@ -186,10 +193,40 @@ int main()
         case 6:
             system("cls");
             printf("----------VENTA AL PUBLICO----------\n");
-            establecerListaPrecios(listaStock, listaRecetas, listaPreparados, listaPrecios, validoStock, validoRecetas, validoPreparados, &validoListaPrecios);
+
+            int opcion;
+            printf("1. Establecer precios\n\n");
+            printf("2. Realizar una venta\n\n");
+            printf("3. Cancelar una compra previa\n\n");
+            printf("0. Salir\n\n");
+            scanf("%i", &opcion);
+            while (opcion < 0 || opcion > 3)
+            {
+                printf("ingresar una opcion valida: ");
+                scanf("%i", opcion);
+            }
 //            PersistenciaPrecios (listaPrecios, validoListaPrecios);
-            venta(listaPreparados, listaPrecios, listaPedidos, listaVentas, validoPreparados, validoListaPrecios, &validoListaVentas);
-//            PersistenciaVentas (listaVentas, validoListaVentas);
+            switch(opcion)
+            {
+            case 1:
+                establecerListaPrecios(listaStock, listaRecetas, listaPreparados, listaPrecios, validoStock, validoRecetas, validoPreparados, &validoListaPrecios);
+                break;
+            case 2:
+                venta(listaPreparados, listaPrecios, listaPedidos, listaVentas, validoPreparados, validoListaPrecios, &validoListaVentas);
+                PersistenciaVentas(listaVentas, validoListaVentas);
+                mostrarVentas(listaVentas, validoListaVentas);
+                break;
+            case 3:
+                mostrarVentas(listaVentas, validoListaVentas);
+                int id = ingresarIdVenta();
+                reintegrarProductos(listaPreparados, listaVentas, validoPreparados, id ,validoListaVentas);
+                bajaLogicaVentaPorId(listaVentas, id);
+                mantenimientoArchivoVentas(listaVentas, &validoListaVentas);
+                mostrarVentas(listaVentas, validoListaVentas);
+                break;
+            case 0:
+                break;
+            }
             break;
 
         case 7:
@@ -524,11 +561,11 @@ float precioPreparado(Receta listaRecetas[max], StockIngrediente listaStockIngre
 void establecerListaPrecios(StockIngrediente listaIngredientesStock[max], Receta listaRecetas[max], Preparacion listaPreparados[max], PrecioPreparacion listaPrecios[max],int validoStock, int validoRecetas, int validoPreparados, int* validoListaPrecios)
 {
     int validoVenta = 0;
-    printf("Funcion 'establecerPrecios'.\n");
 
     float ganancia = 0;
     float precio = 0, precioGanancia = 0;
 
+    system("cls");
     printf("Indicar el porcentaje de ganancia por venta (del 0 al 100):");
     scanf("%f", &ganancia);
     while (ganancia < 0 || ganancia > 100)
@@ -538,7 +575,6 @@ void establecerListaPrecios(StockIngrediente listaIngredientesStock[max], Receta
     }
 
     printf("Porcentaje de ganancia: %%%.1f\n", ganancia);
-    system("pause");
     system("cls");
 
     for (int i = 0; i < validoPreparados; i++)
@@ -619,11 +655,14 @@ float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion list
         total = 0;
         pedido = 0;
         cantidad = 0;
+
         printf("PEDIDO %i\n", i);
         mostrarListaPrecios(listaPreparados, listaPrecios, validoListaPreparados, validoListaPrecios);
+
         printf("\ningresa el numero correspondiente al producto para armar el pedido: ");
         scanf("%i", &pedido);
         printf("Has seleccionado: %s.\n", listaPreparados[pedido].nombre_preparacion);
+
         printf("Indica cantidad que queres llevar: (%i restantes)", listaPreparados[pedido].cantidad);
         scanf("%i", &cantidad);
 
@@ -637,6 +676,7 @@ float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion list
         strcpy(listaPedidos[i].nombre_preparacion, listaPreparados[pedido].nombre_preparacion);
         listaPedidos[i].cantidad = cantidad;
         total = total + precioPedido(listaPrecios, listaPedidos, validoListaPrecios, i, cantidad);
+
         i++;
 
         printf("s si quieres realizar otro pedido: ");
@@ -645,7 +685,9 @@ float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion list
         system("cls");
     }
     while (i < 20 && continuar == 's');
+
     *validoPedidos = i;
+
     return total;
 }
 
@@ -665,7 +707,7 @@ void mostrarVentas(Venta listaVentas[max], int validoVentas)
 
 void venta(PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios[max], PedidoPreparacion listaPedido[max], Venta listaVentas[max], int validoPreparados, int validoListaPrecios, int* validoVentas)
 {
-    int validoPedidos = 0, i = 0;
+    int validoPedidos = 0, i = *validoVentas;
     float costoTotal;
     char continuar;
 
@@ -673,22 +715,29 @@ void venta(PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios
     {
         costoTotal = 0;
         listaVentas[i].idVenta = i;
+
         printf("VENTA ---%i---\n", listaVentas[i].idVenta);
+
         costoTotal = armarPedidos(listaPreparados, listaPrecios, listaPedido, validoPreparados, validoListaPrecios, &validoPedidos);
+
         for (int j = 0; j < validoPedidos; j++)
         {
             strcpy(listaVentas[i].items_pedido[j].nombre_preparacion, listaPedido[j].nombre_preparacion);
             listaVentas[i].items_pedido[j].cantidad = listaPedido[j].cantidad;
         }
+        listaVentas[i].bajaLogica = 0;
         listaVentas[i].cantItems = validoPedidos;
         listaVentas[i].valor_total = costoTotal;
+
         i++;
+
         printf("s para realizar una nueva orden de compra: ");
         fflush(stdin);
         scanf("%c", &continuar);
         system("cls");
     }
     while(continuar == 's');
+
     *validoVentas = i;
 }
 
@@ -703,15 +752,7 @@ void PersistenciaVentas (Venta listaVentas[max], int validoListaVentas)
     }
 
 }
-///FALTA LA BAJA LOGICA POR ID DE VENTA EN PASO 3
 
-///----------PASO 4----------
-/*Requisitos:
-1) Ver una lista del remanente de ingredientes en stock
-2) Lista de preparados y su cantidad que quedan en venta.
-3) Ver el ingreso total del dia
-4) Ver la GANANCIA del día (ingresos - costos).
-*/
 char mostrarPaso4Menu()
 {
     char opcion;
@@ -720,6 +761,7 @@ char mostrarPaso4Menu()
     printf("(2) lista de preparados restantes: \n");
     printf("(3) consulta de caja: \n");
     printf("(4) calculo de ganancia: \n");
+    printf("(0) salir: \n");
     fflush(stdin);
     scanf("%c", &opcion);
     while(opcion < '0' || opcion > '4')
@@ -738,7 +780,7 @@ float consultaCaja(Venta listaVentas[max], int validoVentas)
     {
         ingreso = ingreso + listaVentas[i].valor_total;
     }
-    printf("Ingresos totales: %.2f\n", ingreso);
+    printf("Ingresos totales: $%.2f\n", ingreso);
     return ingreso;
 }
 
@@ -764,17 +806,19 @@ float consultaCostos(StockIngrediente listaStockIngredientes[max], Receta listaR
 void consultaGanancia(float ingresos, float costos)
 {
     float gananciaNeta = ingresos - costos;
-    printf("ganancia NETA del dia %.2f\n", gananciaNeta);
+    printf("ganancia NETA del dia $%.2f\n", gananciaNeta);
 }
 
 void paso4Menu(StockIngrediente listaStockIngredientes[max], Receta listaRecetas[max], PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios[max], Venta listaVentas[max], int validoStockIngredientes, int validoRecetas, int validoListaPreparados, int validoListaPrecios, int validoVentas)
 {
-    char continuar, opcion;
+    char opcion;
     do
     {
         opcion = mostrarPaso4Menu();
         switch (opcion)
         {
+        case '0':
+            break;
         case '1':
             ingredientesRestantes(listaStockIngredientes, validoStockIngredientes);
             break;
@@ -786,11 +830,98 @@ void paso4Menu(StockIngrediente listaStockIngredientes[max], Receta listaRecetas
             break;
         case '4':
             consultaGanancia((consultaCaja(listaVentas, validoVentas)),(consultaCostos(listaStockIngredientes, listaRecetas, listaVentas, validoStockIngredientes, validoRecetas, validoVentas)));
+            break;
         }
-        printf("ingresa cualquier letra para volver al menu, 0 para salir al menu PRINCIPAL: ");
-        fflush(stdin);
-        scanf("%c", &continuar);
-        system("cls");
     }
-    while (continuar != '0');
+    while (opcion != '0');
+}
+
+void despersistenciaVenta(Venta listaVentas[max], int* validoVentas)
+{
+    int i = 0;
+    FILE* fp;
+    fp = fopen(ventas, "rb");
+    if (fp != NULL)
+    {
+        while(fread(&listaVentas[i], sizeof(Venta), 1, fp)>0)
+        {
+            if (listaVentas[i].bajaLogica == 0)
+            {
+                i++;
+            }
+        }
+        fclose(fp);
+    }
+    *validoVentas = i;
+}
+
+int cantidadRegistrosVenta()
+{
+    int cantidad = 0;
+    FILE* fp;
+    fp = fopen(ventas, "rb");
+    if (fp != NULL)
+    {
+        fseek(fp, 0, SEEK_END);
+        cantidad = ftell(fp)/sizeof(Venta);
+        fclose(fp);
+    }
+    return cantidad;
+}
+
+int ingresarIdVenta()
+{
+    int id;
+    printf("Ingresa el id para dar de baja... ");
+    scanf("%i", &id);
+    return id;
+}
+
+void bajaLogicaVentaPorId(Venta listaVentas[max], int id)
+{
+
+    int i = 0, cantidadVentas = cantidadRegistrosVenta();
+    printf("cantidad ventas: %i\n\n", cantidadVentas);
+    FILE* fp;
+    fp = fopen(ventas, "r+b");
+    if (fp != NULL)
+    {
+        fread(&listaVentas[i], sizeof(Venta), 1, fp);
+        while (i < cantidadVentas && listaVentas[i].idVenta != id)
+        {
+            i++;
+            fread(&listaVentas[i], sizeof(Venta), 1, fp);
+        }
+    }
+    if (i < cantidadVentas)
+    {
+        listaVentas[i].bajaLogica = 1;
+        fseek(fp, (-1)*sizeof(Venta), SEEK_CUR);
+        fwrite(&listaVentas[i], sizeof(Venta), 1, fp);
+    }
+    fclose(fp);
+}
+
+void mantenimientoArchivoVentas(Venta listaVentas[max], int* validoVentas)
+{
+    despersistenciaVenta(listaVentas, validoVentas);
+    PersistenciaVentas(listaVentas, *validoVentas);
+}
+
+void reintegrarProductos(PreparacionVenta listaPreparados[max], Venta listaVenta[max], int validoPreparados, int id, int validoVentas)
+{
+    for (int i = 0; i < validoVentas; i++)
+    {
+        printf("ID DE VENTA: %i\n", listaVenta[i].idVenta);
+        if (listaVenta[i].idVenta == id)
+        {
+            for (int j = 0; j < validoPreparados; j++)
+            {
+                if (strcmpi(listaVenta[i].items_pedido[i].nombre_preparacion, listaPreparados[j].nombre_preparacion)==0)
+                {
+                    listaPreparados[j].cantidad = listaPreparados[j].cantidad + listaVenta[i].items_pedido[i].cantidad;
+                }
+            }
+        }
+    }
 }
