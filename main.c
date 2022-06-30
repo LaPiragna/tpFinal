@@ -179,7 +179,7 @@ int main()
             usarIngredientes(listaRecetas, listaStock, listaPreparacion, listaPreparados, validoStock, validoDemanda, validoRecetas, &validoPreparados);
             mostrarPreparadosParaLaVenta(listaPreparados, validoPreparados);
             persistenciaPreparados(listaPreparados, validoPreparados);
-//            persistenciaStock(listaStock, validoStock);
+            persistenciaStock(listaStock, validoStock);
             break;
 
         case 5:
@@ -643,7 +643,6 @@ float precioPedido(PrecioPreparacion listaPrecios[max], PedidoPreparacion listaP
 
 float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios[max], PedidoPreparacion listaPedidos[max], int validoPreparados, int validoListaPrecios, int* validoPedidos)
 {
-    mostrarListaPrecios(listaPreparados, listaPrecios, validoPreparados, validoListaPrecios);
     char continuar;
     int i = 0, pedido, cantidad;
     float total;
@@ -654,7 +653,8 @@ float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion list
         pedido = 0;
         cantidad = 0;
 
-        printf("PEDIDO %i\n", i);
+        mostrarListaPrecios(listaPreparados, listaPrecios, validoPreparados, validoListaPrecios);
+        printf("\nPEDIDO %i\n", i);
 
         printf("\ningresa el numero correspondiente al producto para armar el pedido: ");
         scanf("%i", &pedido);
