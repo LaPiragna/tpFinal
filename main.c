@@ -6,7 +6,7 @@
 #define preparadosVenta "stockventa.bin"
 #define precios "precios.bin"
 #define ventas "ventas.bin"
-#define max 20
+#define max 30
 
 ///-----------------------------Estructuras
 typedef struct
@@ -64,10 +64,6 @@ typedef struct
 } Venta;
 
 ///-----------------------------Prototipos
-//Menu
-void menu(StockIngrediente[max], int*, Receta[max], int*);
-void mostrarMenu();
-char accionMenu();
 //Stock
 void despersistenciaStock(StockIngrediente[max], int*);
 void mostrarIngredienteStock(StockIngrediente);
@@ -82,13 +78,15 @@ void despersistenciaDemanda(Preparacion[max], int*);
 void mostrarDemanda(Preparacion);
 void mostrarDemandas(Preparacion[max], int);
 void usarIngredientes(Receta[max], StockIngrediente[max], Preparacion[max], PreparacionVenta[max], int, int, int, int*);
-int disponibilidadIngredientes(StockIngrediente[max], Preparacion[max], Receta[max], int, int, int);
+int disponibilidadIngredientes(StockIngrediente[max], Receta[max], int, int);
 void consumoIngredientes(StockIngrediente[max], Preparacion[max], Receta[max], int, int, int);
 int finElaboracion(int[max], int);
 void ingredientesRestantes(StockIngrediente[max], int);
 //Venta
 void mostrarPreparadosParaLaVenta(PreparacionVenta[max], int);
 void persistenciaPreparados(PreparacionVenta[max], int);
+void despersistenciaPreaprados(PreparacionVenta[max], int*);
+
 float precioPreparado(Receta[max], StockIngrediente[max], int, int);
 void establecerListaPrecios(StockIngrediente[max], Receta[max], Preparacion[max], PrecioPreparacion[max], int, int, int, int*);
 void mostrarListaPrecios(PreparacionVenta [max], PrecioPreparacion[max], int, int);
@@ -129,6 +127,7 @@ int main()
     despersistenciaStock(listaStock, &validoStock);
     despersistenciaRecetas(listaRecetas, &validoRecetas);
     despersistenciaDemanda(listaPreparacion, &validoDemanda);
+    despersistenciaPreaprados(listaPreparados, &validoPreparados);
 
     do
     {
@@ -176,65 +175,69 @@ int main()
 
         case 4:
             system("cls");
-            //Fue necesario hacer todas las despersistencias, porque sino era obligatorio tener que realizar los pasos previos del menú.
+            //Fue necesario hacer todas las despersistencias, porque sino era obligatorio tener que realizar los pasos previos del menï¿½.
             usarIngredientes(listaRecetas, listaStock, listaPreparacion, listaPreparados, validoStock, validoDemanda, validoRecetas, &validoPreparados);
+            mostrarPreparadosParaLaVenta(listaPreparados, validoPreparados);
+            persistenciaPreparados(listaPreparados, validoPreparados);
 //            persistenciaStock(listaStock, validoStock);
             break;
 
         case 5:
             system("cls");
-            printf("----------LISTO PARA LA VENTA----------\n");
             mostrarPreparadosParaLaVenta(listaPreparados, validoPreparados);
-
-//            persistenciaPreparados(listaPreparados, validoPreparados);
             break;
 
 
         case 6:
             system("cls");
             printf("----------VENTA AL PUBLICO----------\n");
-
             int opcion;
-            printf("1. Establecer precios\n\n");
-            printf("2. Realizar una venta\n\n");
-            printf("3. Cancelar una compra previa\n\n");
-            printf("0. Salir\n\n");
-            scanf("%i", &opcion);
-            while (opcion < 0 || opcion > 3)
+            do
             {
-                printf("ingresar una opcion valida: ");
-                scanf("%i", opcion);
+                printf("1. Establecer precios\n\n");
+                printf("2. Realizar una venta\n\n");
+                printf("3. Cancelar una compra previa\n\n");
+                printf("0. Salir\n\n");
+                scanf("%i", &opcion);
+                while (opcion < 0 || opcion > 3)
+                {
+                    printf("ingresar una opcion valida: ");
+                    scanf("%i", &opcion);
+                }
+                switch(opcion)
+                {
+                case 1:
+                    establecerListaPrecios(listaStock, listaRecetas, listaPreparados, listaPrecios, validoStock, validoRecetas, validoPreparados, &validoListaPrecios);
+                    break;
+                case 2:
+                    system("cls");
+                    venta(listaPreparados, listaPrecios, listaPedidos, listaVentas, validoPreparados, validoListaPrecios, &validoListaVentas);
+                    PersistenciaVentas(listaVentas, validoListaVentas);
+                    system("cls");
+                    mostrarVentas(listaVentas, validoListaVentas);
+                    system("pause");
+                    system("cls");
+                    break;
+                case 3:
+                    system("cls");
+                    mostrarVentas(listaVentas, validoListaVentas);
+                    int id = ingresarIdVenta();
+                    reintegrarProductos(listaPreparados, listaVentas, validoPreparados, id,validoListaVentas);
+                    bajaLogicaVentaPorId(listaVentas, id);
+                    mantenimientoArchivoVentas(listaVentas, &validoListaVentas);
+                    system("cls");
+                    mostrarVentas(listaVentas, validoListaVentas);
+                    break;
+                case 0:
+                    break;
+                }
             }
-//            PersistenciaPrecios (listaPrecios, validoListaPrecios);
-            switch(opcion)
-            {
-            case 1:
-                establecerListaPrecios(listaStock, listaRecetas, listaPreparados, listaPrecios, validoStock, validoRecetas, validoPreparados, &validoListaPrecios);
-                break;
-            case 2:
-                venta(listaPreparados, listaPrecios, listaPedidos, listaVentas, validoPreparados, validoListaPrecios, &validoListaVentas);
-                PersistenciaVentas(listaVentas, validoListaVentas);
-                mostrarVentas(listaVentas, validoListaVentas);
-                break;
-            case 3:
-                mostrarVentas(listaVentas, validoListaVentas);
-                int id = ingresarIdVenta();
-                reintegrarProductos(listaPreparados, listaVentas, validoPreparados, id ,validoListaVentas);
-                bajaLogicaVentaPorId(listaVentas, id);
-                mantenimientoArchivoVentas(listaVentas, &validoListaVentas);
-                mostrarVentas(listaVentas, validoListaVentas);
-                break;
-            case 0:
-                break;
-            }
+            while (opcion != 0);
             break;
 
         case 7:
-            system("cls");
-            printf("----------PASO 4----------\n");
             paso4Menu(listaStock, listaRecetas, listaPreparados, listaPrecios, listaVentas, validoStock, validoRecetas, validoPreparados, validoListaPrecios, validoListaVentas);
             break;
-
         }
 
         system("pause");
@@ -387,123 +390,93 @@ void despersistenciaDemanda(Preparacion lista[max], int* validos)
     *validos = i;
 }
 ///----------PREPARADO----------
-int disponibilidadIngredientes(StockIngrediente listaStockIngredientes[max], Preparacion listaDemandas[max], Receta listaRecetas[max], int validoStockIngredientes, int iDemanda, int iReceta)
-{
-    int disponibilidad = 1;
-    if (listaDemandas[iDemanda].cantidad > 0)
-    {
-        for (int i = 0; i < listaRecetas[iReceta].cantIngredientes; i++)
-        {
-            for (int j = 0; j < validoStockIngredientes; j++)
-            {
-                if (strcmpi(listaRecetas[iReceta].ingredientes[i].nombre_ingrediente, listaStockIngredientes[j].nombre_ingrediente)==0)
-                {
-                    if ((listaStockIngredientes[j].cantidad - (listaRecetas[iReceta].ingredientes[i].cantidad))>=0)
-                    {
-                    }
-                    else
-                    {
-                        disponibilidad = 0;
-                    }
-                }
-            }
-        }
-    }
-    else
-        disponibilidad = 0;
-    return disponibilidad;
-}
-
 void consumoIngredientes(StockIngrediente listaStockIngredientes[max], Preparacion listaDemandas[max], Receta listaRecetas[max], int validoStockIngredientes, int iDemanda, int iReceta)
 {
-    for (int i = 0; i < listaRecetas[iReceta].cantIngredientes; i++)
+    int i = 0;
+    printf("cantidad de INGREDIENTES necesarios para hacer 1 %s: %i\n\n", listaRecetas[iReceta].nombre_preparacion, listaRecetas[iReceta].cantIngredientes);
+    system("cls");
+    while (i < listaRecetas[iReceta].cantIngredientes)
     {
         for (int j = 0; j < validoStockIngredientes; j++)
         {
             if (strcmpi(listaRecetas[iReceta].ingredientes[i].nombre_ingrediente, listaStockIngredientes[j].nombre_ingrediente)==0)
             {
                 listaStockIngredientes[j].cantidad = listaStockIngredientes[j].cantidad - listaRecetas[iReceta].ingredientes[i].cantidad;
+                if(strcmpi(listaStockIngredientes[j].tipo, "solido")==0)
+                {
+                    if (strcmpi(strcmpi(listaStockIngredientes[j].nombre_ingrediente, "huevo")==0))
+                    {
+                        printf("%s restante: %.0f.\n\n", listaStockIngredientes[j].nombre_ingrediente, listaStockIngredientes[j].cantidad);
+                    }
+                    else
+                    {
+                        printf("%s restante: %.3f kilos.\n\n", listaStockIngredientes[j].nombre_ingrediente, listaStockIngredientes[j].cantidad);
+                    }
+                }
+                else if (strcmpi(listaStockIngredientes[j].tipo, "liquido")==0)
+                {
+                    printf("%s restante: %.3f litros.\n\n", listaStockIngredientes[j].nombre_ingrediente, listaStockIngredientes[j].cantidad);
+                }
             }
         }
+        i++;
     }
 }
 
-int finElaboracion(int posibilidadElaboracion[max], int validoDemanda)
+int disponibilidadIngredientes(StockIngrediente listaStockIngredientes[max], Receta listaRecetas[max], int validoStock, int iReceta)
 {
-    int contador = 0;
-    int fin = 0;
-
-    for (int i = 0; i < validoDemanda; i++)
+    int disponibilidad = 1, j = 0;
+    for (int i = 0; i < listaRecetas[iReceta].cantIngredientes; i++)
     {
-        if (posibilidadElaboracion[i] == 0)
+        j = 0;
+        while (j < validoStock && strcmpi(listaRecetas[iReceta].ingredientes[i].nombre_ingrediente, listaStockIngredientes[j].nombre_ingrediente)!=0)
         {
-            contador++;
+            j++;
+        }
+        if (j < validoStock)
+        {
+            if ((listaStockIngredientes[j].cantidad - listaRecetas[iReceta].ingredientes[i].cantidad)>=0)
+            {
+            }
+            else if ((listaStockIngredientes[j].cantidad - listaRecetas[iReceta].ingredientes[i].cantidad)<0)
+            {
+                printf("NO hay disponibilidad de %s para %s.\n", listaStockIngredientes[j].nombre_ingrediente, listaRecetas[iReceta].nombre_preparacion);
+                disponibilidad = 0;
+            }
         }
     }
-
-    if (contador == 13)
-    {
-        fin = 1;
-    }
-
-    return fin;
+    printf("dispo %s: %i\n\n",listaRecetas[iReceta].nombre_preparacion, disponibilidad);
+    return disponibilidad;
 }
 
 void usarIngredientes(Receta listaRecetas[max], StockIngrediente listaStockIngredientes[max], Preparacion listaDemandas[max], PreparacionVenta listaPreaparados[max], int validoStockIngredientes, int validoDemanda, int validoRecetas, int* validoPreparados)
 {
-    int i, j, p, q, disponibilidad = 0, fin = 0;
-
-    int posibilidadElaboracion[validoDemanda]; //Cuando todos los indices contengan 0, no se puede elaborar ningun producto mas.
+    int validos = 0;
     for (int i = 0; i < validoDemanda; i++)
     {
-        posibilidadElaboracion[i] = 1;
-    }
-
-    while (fin == 0) //esta variable va a indicar el fin de la etapa de produccion.
-    {
-        for (int i = 0; i < validoDemanda; i++)
+        validos++;
+        strcpy(listaPreaparados[i].nombre_preparacion, listaDemandas[i].nombre_preparacion);
+        listaPreaparados[i].cantidad=0;
+        for (int j = 0; j < validoRecetas; j++)
         {
-            strcpy(listaPreaparados[i].nombre_preparacion, listaDemandas[i].nombre_preparacion);
-            for (int j = 0; j < validoRecetas; j++)
+            if (strcmpi(listaDemandas[i].nombre_preparacion, listaRecetas[j].nombre_preparacion)==0)
             {
-                if (strcmpi(listaDemandas[i].nombre_preparacion, listaRecetas[j].nombre_preparacion) == 0 )
+                while (listaDemandas[i].cantidad > 0 && (disponibilidadIngredientes(listaStockIngredientes, listaRecetas, validoStockIngredientes, j)==1))
                 {
-                    disponibilidad = disponibilidadIngredientes(listaStockIngredientes, listaDemandas, listaRecetas, validoStockIngredientes, i, j);
-                    posibilidadElaboracion[i] = disponibilidad;
-                    if (disponibilidad == 1)
-                    {
-                        consumoIngredientes(listaStockIngredientes, listaDemandas, listaRecetas, validoStockIngredientes, i, j);
-                        strcpy(listaPreaparados[i].nombre_preparacion, listaRecetas[j].nombre_preparacion);
-                        listaPreaparados[i].cantidad++;
-                        listaDemandas[i].cantidad--;
-                    }
+                    consumoIngredientes(listaStockIngredientes, listaDemandas, listaRecetas, validoStockIngredientes, i, j);
+                    listaDemandas[i].cantidad--;
+                    listaPreaparados[i].cantidad++;
+                    printf("demanda restante de %s: %i\n", listaDemandas[i].nombre_preparacion, listaDemandas[i].cantidad);
                 }
             }
         }
-        fin = finElaboracion(posibilidadElaboracion, validoDemanda);
     }
-
-    int preparados = 0;
-    for(int i = 0; i < validoDemanda; i++)
-    {
-        if ((listaPreaparados[i].cantidad)==0)
-        {
-            printf("No se ha preparado %s.\n", listaPreaparados[i].nombre_preparacion);
-            preparados++;
-        }
-        else if ((listaPreaparados[i].cantidad)>0)
-        {
-            preparados++;
-        }
-    }
-    *validoPreparados = preparados;
-    system("cls");
-    printf("Elaboracion realizada\n");
+    *validoPreparados = validos;
 }
 
 void ingredientesRestantes(StockIngrediente listaStockIngredientes[max], int validoStockIngredientes)
 {
-    printf("\n\ningredientes restantes:\n");
+    printf("ingredientes restantes:\n\n");
     for (int i = 0; i < validoStockIngredientes; i++)
     {
         if (strcmpi(listaStockIngredientes[i].tipo, "solido") == 0)
@@ -520,25 +493,49 @@ void ingredientesRestantes(StockIngrediente listaStockIngredientes[max], int val
             printf("%s: %.3f litros\n", listaStockIngredientes[i].nombre_ingrediente, listaStockIngredientes[i].cantidad);
         }
     }
+    printf("\n\n\n");
 }
 ///----------VENTA----------
 
 void mostrarPreparadosParaLaVenta(PreparacionVenta listaPreparados[max], int validoPreparados)
 {
+    printf("PREPARADOS: \n\n");
     for (int i = 0; i < validoPreparados; i++)
     {
         printf("%s: %i.\n", listaPreparados[i].nombre_preparacion, listaPreparados[i].cantidad);
     }
+    printf("\n\n\n");
 }
 
 void persistenciaPreparados(PreparacionVenta listaPreparados[max], int validoPreparados)
 {
     FILE* fp;
-    fp = fopen(preparadosVenta, "wb");
-    if (fp =! NULL)
+    fp = fopen("stockventa.bin","wb");
+    if (fp != NULL)
     {
-        fwrite(listaPreparados, sizeof(PreparacionVenta), validoPreparados, fp);
+        fwrite(listaPreparados,sizeof(PreparacionVenta),validoPreparados,fp);
         fclose(fp);
+    }
+
+}
+
+void despersistenciaPreaprados(PreparacionVenta listaPreparados[max], int* validoPreparados)
+{
+    int i = 0;
+    FILE* fp;
+    fp = fopen(preparadosVenta, "rb");
+    if (fp != NULL)
+    {
+        while(fread(&listaPreparados[i], sizeof(PreparacionVenta), 1, fp)>0)
+        {
+            i++;
+        }
+        fclose(fp);
+        *validoPreparados = i;
+    }
+    else
+    {
+        printf("No habia existencia de tal archivo...\n\n");
     }
 }
 
@@ -605,7 +602,7 @@ void mostrarListaPrecios(PreparacionVenta listaPreparados[max], PrecioPreparacio
         {
             if (strcmpi(listaPreparados[i].nombre_preparacion, listaPrecios[j].nombre_preparacion)==0)
             {
-                printf("(%i) %s: $%.1f\n", i, listaPreparados[i].nombre_preparacion, listaPrecios[i].precio_venta);
+                printf("(%i) %s: $%.1f     (%i restantes)\n", i, listaPreparados[i].nombre_preparacion, listaPrecios[i].precio_venta, listaPreparados[i].cantidad);
             }
         }
     }
@@ -644,8 +641,9 @@ float precioPedido(PrecioPreparacion listaPrecios[max], PedidoPreparacion listaP
     return costo;
 }
 
-float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios[max], PedidoPreparacion listaPedidos[max], int validoListaPreparados, int validoListaPrecios, int* validoPedidos)
+float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios[max], PedidoPreparacion listaPedidos[max], int validoPreparados, int validoListaPrecios, int* validoPedidos)
 {
+    mostrarListaPrecios(listaPreparados, listaPrecios, validoPreparados, validoListaPrecios);
     char continuar;
     int i = 0, pedido, cantidad;
     float total;
@@ -657,7 +655,6 @@ float armarPedidos(PreparacionVenta listaPreparados[max], PrecioPreparacion list
         cantidad = 0;
 
         printf("PEDIDO %i\n", i);
-        mostrarListaPrecios(listaPreparados, listaPrecios, validoListaPreparados, validoListaPrecios);
 
         printf("\ningresa el numero correspondiente al producto para armar el pedido: ");
         scanf("%i", &pedido);
@@ -766,7 +763,7 @@ char mostrarPaso4Menu()
     scanf("%c", &opcion);
     while(opcion < '0' || opcion > '4')
     {
-        printf("Ingresa una opcion valida.../n");
+        printf("Ingresa una opcion valida...\n");
         fflush(stdin);
         scanf("%c", &opcion);
     }
@@ -807,6 +804,7 @@ void consultaGanancia(float ingresos, float costos)
 {
     float gananciaNeta = ingresos - costos;
     printf("ganancia NETA del dia $%.2f\n", gananciaNeta);
+    printf("\n\n\n");
 }
 
 void paso4Menu(StockIngrediente listaStockIngredientes[max], Receta listaRecetas[max], PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios[max], Venta listaVentas[max], int validoStockIngredientes, int validoRecetas, int validoListaPreparados, int validoListaPrecios, int validoVentas)
@@ -814,22 +812,32 @@ void paso4Menu(StockIngrediente listaStockIngredientes[max], Receta listaRecetas
     char opcion;
     do
     {
+        system("cls");
         opcion = mostrarPaso4Menu();
         switch (opcion)
         {
         case '0':
+            system("cls");
             break;
         case '1':
+            system("cls");
             ingredientesRestantes(listaStockIngredientes, validoStockIngredientes);
+            system("pause");
             break;
         case '2':
+            system("cls");
             mostrarPreparadosParaLaVenta(listaPreparados, validoListaPreparados);
+            system("pause");
             break;
         case '3':
+            system("cls");
             consultaCaja(listaVentas, validoVentas);
+            system("pause");
             break;
         case '4':
+            system("cls");
             consultaGanancia((consultaCaja(listaVentas, validoVentas)),(consultaCostos(listaStockIngredientes, listaRecetas, listaVentas, validoStockIngredientes, validoRecetas, validoVentas)));
+            system("pause");
             break;
         }
     }
