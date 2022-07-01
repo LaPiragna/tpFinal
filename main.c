@@ -109,28 +109,36 @@ float consultaCaja(Venta[max], int);
 float consultaCostos(StockIngrediente[max], Receta[max], Venta[max], int, int, int);
 void consultaGanancia(float, float);
 void paso4Menu(StockIngrediente[max], Receta[max], PreparacionVenta[max], PrecioPreparacion listaPrecios[max], Venta[max], int, int, int,int, int);
+
+void menuSwitch(StockIngrediente[max], Preparacion[max], Receta[max], PreparacionVenta[max], PrecioPreparacion[max], PedidoPreparacion[max], Venta[max], int, int , int, int, int, int, int);
 ///-----------------------------Main
 int main()
 {
 
     StockIngrediente listaStock[max]; //(ingredientes)
     Receta listaRecetas[max];
-    Preparacion listaPreparacion[max]; //(demanda)
+    Preparacion listaDemanda[max]; //(demanda)
     PreparacionVenta listaPreparados[max]; //(productos para vender)
     PrecioPreparacion listaPrecios[max];
     PedidoPreparacion listaPedidos[max];
     Venta listaVentas[max];
     int validoStock = 0, validoRecetas = 0, validoDemanda = 0, validoPreparados = 0, validoListaPrecios = 0, validoListaPedidos = 0, validoListaVentas = 0;
 
-
-    int opcion_usuario;
-
     despersistenciaStock(listaStock, &validoStock);
     despersistenciaRecetas(listaRecetas, &validoRecetas);
-    despersistenciaDemanda(listaPreparacion, &validoDemanda);
+    despersistenciaDemanda(listaDemanda, &validoDemanda);
     despersistenciaPreaprados(listaPreparados, &validoPreparados);
     despersistenciaPrecios(listaPrecios, &validoListaPrecios);
 
+    menuSwitch(listaStock, listaDemanda, listaRecetas, listaPreparados, listaPrecios, listaPedidos, listaVentas, validoStock, validoDemanda, validoRecetas, validoPreparados, validoListaPrecios, validoListaPedidos, validoListaVentas);
+
+    return 0;
+}
+
+///----------STOCK----------
+void menuSwitch(StockIngrediente listaStockIngredientes[max], Preparacion listaDemanda[max], Receta listaRecetas[max], PreparacionVenta listaPreparados[max], PrecioPreparacion listaPrecios[max], PedidoPreparacion listaPedidos[max], Venta listaVentas[max], int validoStockIngredientes, int validoDemanda, int validoRecetas, int validoPreparados, int validoPrecios, int validoPedidos, int validoVentas)
+{
+    int opcion_usuario;
     do
     {
         printf("\n****** MENU PANADERIA ******\n\n");
@@ -160,19 +168,19 @@ int main()
         case 1:
             system("cls");
             printf("----------STOCK ingredientes----------\n");
-            mostrarStock(listaStock, validoStock); //Muestra de la info almacenada de "stockingredientes.bin"
+            mostrarStock(listaStockIngredientes, validoStockIngredientes); //Muestra de la info almacenada de "stockingredientes.bin"
             break;
 
         case 2:
             system("cls");
             printf("----------RECETAS----------\n");
-            mostrarRecetas(listaRecetas, validoRecetas, listaStock, validoStock); //Muestra de la info almacenada de "recetas.bin"
+            mostrarRecetas(listaRecetas, validoRecetas, listaStockIngredientes, validoStockIngredientes); //Muestra de la info almacenada de "recetas.bin"
             break;
 
         case 3:
             system("cls");
             printf("----------DEMANDA----------\n");
-            mostrarDemandas(listaPreparacion, validoDemanda); //Muestra de la info almacenada de "demanda.bin"
+            mostrarDemandas(listaDemanda, validoDemanda); //Muestra de la info almacenada de "demanda.bin"
             break;
 
         case 4:
@@ -180,10 +188,10 @@ int main()
             //Fue necesario hacer todas las despersistencias, porque sino era obligatorio tener que realizar los pasos previos del men�.
             if (validoPreparados == 0)
             {
-                usarIngredientes(listaRecetas, listaStock, listaPreparacion, listaPreparados, validoStock, validoDemanda, validoRecetas, &validoPreparados);
+                usarIngredientes(listaRecetas, listaStockIngredientes, listaDemanda, listaPreparados, validoStockIngredientes, validoDemanda, validoRecetas, &validoPreparados);
                 mostrarPreparadosParaLaVenta(listaPreparados, validoPreparados);
                 persistenciaPreparados(listaPreparados, validoPreparados);
-                persistenciaStock(listaStock, validoStock);
+                persistenciaStock(listaStockIngredientes, validoStockIngredientes);
             }
             else
             {
@@ -216,17 +224,18 @@ int main()
                 switch(opcion)
                 {
                 case 1:
-                    establecerListaPrecios(listaStock, listaRecetas, listaPreparados, listaPrecios, validoStock, validoRecetas, validoPreparados, &validoListaPrecios);
-                    PersistenciaPrecios(listaPrecios, validoListaPrecios);
+                    establecerListaPrecios(listaStockIngredientes, listaRecetas, listaPreparados, listaPrecios, validoStockIngredientes, validoRecetas, validoPreparados, &validoPrecios);
+                    PersistenciaPrecios(listaPrecios, validoPrecios);
                     break;
                 case 2:
                     system("cls");
-                    if (listaPrecios[2].precio_venta > 0 && validoListaPrecios > 0 )
+                    if (listaPrecios[2].precio_venta > 0 && validoPrecios > 0 )
                     {
-                        venta(listaPreparados, listaPrecios, listaPedidos, listaVentas, validoPreparados, validoListaPrecios, &validoListaVentas);
-                        PersistenciaVentas(listaVentas, validoListaVentas);
+                        venta(listaPreparados, listaPrecios, listaPedidos, listaVentas, validoPreparados, validoPrecios, &validoVentas);
+                        PersistenciaVentas(listaVentas, validoVentas);
+                        persistenciaPreparados(listaPreparados, validoPreparados);
                         system("cls");
-                        mostrarVentas(listaVentas, validoListaVentas);
+                        mostrarVentas(listaVentas, validoVentas);
                     }
                     else
                     {
@@ -237,17 +246,18 @@ int main()
                     break;
                 case 3:
                     system("cls");
-                    if (validoListaVentas > 0)
+                    if (validoVentas > 0)
                     {
-                        mostrarVentas(listaVentas, validoListaVentas);
-                        int id = ingresarIdVenta(validoListaVentas);
+                        mostrarVentas(listaVentas, validoVentas);
+                        int id = ingresarIdVenta(validoVentas);
                         if (id != 0)
                         {
-                            reintegrarProductos(listaPreparados, listaVentas, validoPreparados, id, validoListaVentas);
+                            reintegrarProductos(listaPreparados, listaVentas, validoPreparados, id, validoVentas);
                             bajaLogicaVentaPorId(listaVentas, id);
-                            mantenimientoArchivoVentas(listaVentas, &validoListaVentas);
+                            mantenimientoArchivoVentas(listaVentas, &validoVentas);
+                            persistenciaPreparados(listaPreparados, validoPreparados);
                             system("cls");
-                            mostrarVentas(listaVentas, validoListaVentas);
+                            mostrarVentas(listaVentas, validoVentas);
                         }
                     }
                     else
@@ -265,19 +275,15 @@ int main()
             break;
 
         case 7:
-            paso4Menu(listaStock, listaRecetas, listaPreparados, listaPrecios, listaVentas, validoStock, validoRecetas, validoPreparados, validoListaPrecios, validoListaVentas);
+            paso4Menu(listaStockIngredientes, listaRecetas, listaPreparados, listaPrecios, listaVentas, validoStockIngredientes, validoRecetas, validoPreparados, validoPrecios, validoVentas);
             break;
         }
-
         system("pause");
         system("cls");
     }
     while (opcion_usuario != 0);
-
-    return 0;
 }
 
-///----------STOCK----------
 void mostrarIngredienteStock(StockIngrediente i)
 {
     puts(i.nombre_ingrediente);
